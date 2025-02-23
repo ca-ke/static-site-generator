@@ -153,7 +153,7 @@ def split_nodes_link(old_nodes):
 
 
 def block_to_block_type(block) -> BlockType:
-    if block.strip().startswith("# "):
+    if re.match(r"^#+\s", block.strip()):
         return BlockType.HEADING
     elif block.strip().startswith("```") and block.strip().endswith("```"):
         return BlockType.CODE
@@ -165,3 +165,49 @@ def block_to_block_type(block) -> BlockType:
         return BlockType.ORDERED_LIST
     else:
         return BlockType.PARAGRAPH
+
+
+def markdown_to_html_node(markdown):
+    splitted_markdown = markdown_to_blocks(markdown)
+    print(splitted_markdown)
+    result = []
+    for element in splitted_markdown:
+        block_type = block_to_block_type(element)
+        if block_type == BlockType.HEADING:
+            heading_level = element.count("#", 0, element.index(" "))
+            heading_text = element.lstrip("# ").strip()
+            result.append(
+                HTMLNode(
+                    tag=f"h{heading_level}",
+                    value=heading_text,
+                )
+            )
+        elif block_type == BlockType.PARAGRAPH:
+            result.append(HTMLNode(tag="p", value=element.strip()))
+        elif block_type == BlockType.CODE:
+            code_content = "\n".join(
+                line for line in element.splitlines() if not line.startswith("```")
+            )
+            result.append(
+                HTMLNode(tag="pre", children=[HTMLNode(tag="code", value=code_content)])
+            )
+        elif block_type == BlockType.UNORDERED_LIST:
+            list_items = [
+                HTMLNode(tag="li", value=line.lstrip("*- ").strip())
+                for line in element.splitlines()
+                if line.strip()
+            ]
+            result.append(HTMLNode(tag="ul", children=list_items))
+        elif block_type == BlockType.ORDERED_LIST:
+            list_item = [
+                HTMLNode(tag="li", value=re.sub(r"^\d+\.\s", "", line).strip())
+                for line in element.splitlines()
+                if line.strip()
+            ]
+            result.append(HTMLNode(tag="ol", children=list_item))
+        elif block_type == BlockType.QUOTE:
+            quote_lines = [line.lstrip("> ").strip() for line in element.splitlines()]
+            quote_content = "\n".join(quote_lines)
+            result.append(HTMLNode(tag="blockquote", value=quote_content))
+
+    return HTMLNode(tag="div", children=result)

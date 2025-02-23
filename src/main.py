@@ -1,9 +1,9 @@
 from textnode import TextNode
+from utils import copy_from_source_to_destination
 
 
 def main():
-    text_node = TextNode("This is a text node", "bold", "https://www.boot.dev")
-    print(text_node)
+    copy_from_source_to_destination("static", "public")
 
 
 if __name__ == "__main__":
