@@ -1,11 +1,10 @@
-from typing import List
 from htmlnode import HTMLNode
+from parentnode import ParentNode
 from leafnode import LeafNode
 from textnode import TextNode
 from textype import TextType
 from blocktype import BlockType
 import re
-import functools
 
 
 def text_node_to_html_node(text_node: TextNode) -> HTMLNode:
@@ -91,7 +90,7 @@ def text_to_textnodes(text):
                         delimiter="**",
                         text_type="bold",
                     ),
-                    delimiter="*",
+                    delimiter="_",
                     text_type="italic",
                 ),
                 delimiter="`",
@@ -157,7 +156,7 @@ def block_to_block_type(block) -> BlockType:
         return BlockType.HEADING
     elif block.strip().startswith("```") and block.strip().endswith("```"):
         return BlockType.CODE
-    elif all(line.strip().startswith("> ") for line in block.split("\n")):
+    elif all(line.strip().startswith(">") for line in block.split("\n")):
         return BlockType.QUOTE
     elif all(line.strip().startswith(("* ", "- ")) for line in block.split("\n")):
         return BlockType.UNORDERED_LIST
@@ -165,6 +164,15 @@ def block_to_block_type(block) -> BlockType:
         return BlockType.ORDERED_LIST
     else:
         return BlockType.PARAGRAPH
+
+
+def text_to_children(text):
+    text_nodes = text_to_textnodes(text)
+    children = []
+    for text_node in text_nodes:
+        html_node = text_node_to_html_node(text_node)
+        children.append(html_node)
+    return children
 
 
 def markdown_to_html_node(markdown):
@@ -177,37 +185,82 @@ def markdown_to_html_node(markdown):
             heading_level = element.count("#", 0, element.index(" "))
             heading_text = element.lstrip("# ").strip()
             result.append(
-                HTMLNode(
+                ParentNode(
                     tag=f"h{heading_level}",
-                    value=heading_text,
+                    children=text_to_children(heading_text),
                 )
             )
         elif block_type == BlockType.PARAGRAPH:
-            result.append(HTMLNode(tag="p", value=element.strip()))
+            result.append(
+                ParentNode(tag="p", children=text_to_children(element.strip()))
+            )
         elif block_type == BlockType.CODE:
             code_content = "\n".join(
                 line for line in element.splitlines() if not line.startswith("```")
             )
             result.append(
-                HTMLNode(tag="pre", children=[HTMLNode(tag="code", value=code_content)])
+                ParentNode(
+                    tag="pre",
+                    children=[
+                        ParentNode(tag="code", children=text_to_children(code_content))
+                    ],
+                )
             )
         elif block_type == BlockType.UNORDERED_LIST:
             list_items = [
-                HTMLNode(tag="li", value=line.lstrip("*- ").strip())
+                ParentNode(
+                    tag="li", children=text_to_children(line.lstrip("*- ").strip())
+                )
                 for line in element.splitlines()
                 if line.strip()
             ]
-            result.append(HTMLNode(tag="ul", children=list_items))
+            result.append(ParentNode(tag="ul", children=list_items))
         elif block_type == BlockType.ORDERED_LIST:
             list_item = [
-                HTMLNode(tag="li", value=re.sub(r"^\d+\.\s", "", line).strip())
+                ParentNode(
+                    tag="li",
+                    children=text_to_children(re.sub(r"^\d+\.\s", "", line).strip()),
+                )
                 for line in element.splitlines()
                 if line.strip()
             ]
-            result.append(HTMLNode(tag="ol", children=list_item))
+            result.append(ParentNode(tag="ol", children=list_item))
         elif block_type == BlockType.QUOTE:
-            quote_lines = [line.lstrip("> ").strip() for line in element.splitlines()]
-            quote_content = "\n".join(quote_lines)
-            result.append(HTMLNode(tag="blockquote", value=quote_content))
+            quote_lines = [line.lstrip(">").strip() for line in element.splitlines()]
+            quote_content = " ".join(quote_lines)
+            result.append(
+                ParentNode(tag="blockquote", children=text_to_children(quote_content))
+            )
 
-    return HTMLNode(tag="div", children=result)
+    return ParentNode(tag="div", children=result)
+
+
+def extract_title(markdown):
+    splitted_doc = markdown.splitlines()
+    h1_elements = [element for element in splitted_doc if element.startswith("# ")]
+    contains_h1 = len(h1_elements) > 0
+    if not contains_h1:
+        raise Exception()
+
+    return h1_elements[0].split("#")[-1].strip()
+
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+
+    with open(from_path) as f:
+        content = "".join(f.readlines())
+
+    with open(template_path) as tf:
+        template = "".join(tf.readlines())
+
+    html_node = markdown_to_html_node(content)
+    stringfied_html = html_node.to_html()
+    title = extract_title(content)
+
+    title_updated = template.replace("{{ Title }}", title)
+    content_updated = title_updated.replace("{{ Content }}", stringfied_html)
+
+    with open(dest_path, "a") as df:
+        df.write(content_updated)
+        df.close()

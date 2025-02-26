@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 from htmlnode import HTMLNode
 
 
@@ -6,7 +6,7 @@ class ParentNode(HTMLNode):
     def __init__(
         self,
         tag: str,
-        children: List["HTMLNode"],
+        children: list,
         props: Optional[dict] = None,
     ):
         super().__init__(
