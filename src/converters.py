@@ -38,7 +38,7 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type):
             continue
 
         if node.text.count(delimiter) % 2 != 0:
-            raise Exception("Delimiter must be closed")
+            raise Exception(f"Delimiter {delimiter} must be closed - {node.text}")
 
         splitted_node_text = re.split(pattern, node.text)
         waiting_for_close = False
@@ -158,7 +158,7 @@ def block_to_block_type(block) -> BlockType:
         return BlockType.CODE
     elif all(line.strip().startswith(">") for line in block.split("\n")):
         return BlockType.QUOTE
-    elif all(line.strip().startswith(("* ", "- ")) for line in block.split("\n")):
+    elif all(line.strip().startswith(("- ")) for line in block.split("\n")):
         return BlockType.UNORDERED_LIST
     elif all(re.match(r"^\d+\.\s", line.strip()) for line in block.split("\n")):
         return BlockType.ORDERED_LIST
@@ -208,9 +208,7 @@ def markdown_to_html_node(markdown):
             )
         elif block_type == BlockType.UNORDERED_LIST:
             list_items = [
-                ParentNode(
-                    tag="li", children=text_to_children(line.lstrip("*- ").strip())
-                )
+                ParentNode(tag="li", children=text_to_children(line[2:]))
                 for line in element.splitlines()
                 if line.strip()
             ]
@@ -243,24 +241,3 @@ def extract_title(markdown):
         raise Exception()
 
     return h1_elements[0].split("#")[-1].strip()
-
-
-def generate_page(from_path, template_path, dest_path):
-    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
-
-    with open(from_path) as f:
-        content = "".join(f.readlines())
-
-    with open(template_path) as tf:
-        template = "".join(tf.readlines())
-
-    html_node = markdown_to_html_node(content)
-    stringfied_html = html_node.to_html()
-    title = extract_title(content)
-
-    title_updated = template.replace("{{ Title }}", title)
-    content_updated = title_updated.replace("{{ Content }}", stringfied_html)
-
-    with open(dest_path, "a") as df:
-        df.write(content_updated)
-        df.close()

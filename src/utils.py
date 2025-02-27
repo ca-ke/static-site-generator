@@ -1,5 +1,6 @@
 import os
 from os.path import isdir
+from converters import markdown_to_html_node, extract_title
 
 
 def copy_from_source_to_destination(source, destination):
@@ -60,3 +61,41 @@ def delete_files_from(path):
                 os.rmdir(file_path)
         except Exception as e:
             print("Failed to delete %s. Reason: %s" % (file_path, e))
+
+
+def generate_page_recursive(dir_path_content, template_path, dest_dir_path):
+    for item in os.listdir(dir_path_content):
+        file_path = os.path.join(dir_path_content, item)
+        if os.path.isdir(file_path):
+            generate_page_recursive(file_path, template_path, dest_dir_path)
+        elif file_path.endswith(".md"):
+            relative_path = os.path.relpath(file_path, "content")
+            dest_file_path = os.path.join(
+                dest_dir_path, relative_path.replace(".md", ".html")
+            )
+            os.makedirs(os.path.dirname(dest_file_path), exist_ok=True)
+            try:
+                generate_page(file_path, template_path, dest_file_path)
+            except Exception as e:
+                print(f"Quebrou {file_path} por {e}")
+
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+
+    with open(from_path) as f:
+        content = "".join(f.readlines())
+
+    with open(template_path) as tf:
+        template = "".join(tf.readlines())
+
+    html_node = markdown_to_html_node(content)
+    stringfied_html = html_node.to_html()
+    title = extract_title(content)
+
+    title_updated = template.replace("{{ Title }}", title)
+    content_updated = title_updated.replace("{{ Content }}", stringfied_html)
+
+    with open(dest_path, "w+") as df:
+        df.write(content_updated)
+        df.close()
