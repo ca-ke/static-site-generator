@@ -63,11 +63,11 @@ def delete_files_from(path):
             print("Failed to delete %s. Reason: %s" % (file_path, e))
 
 
-def generate_page_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_page_recursive(base_path, dir_path_content, template_path, dest_dir_path):
     for item in os.listdir(dir_path_content):
         file_path = os.path.join(dir_path_content, item)
         if os.path.isdir(file_path):
-            generate_page_recursive(file_path, template_path, dest_dir_path)
+            generate_page_recursive(base_path, file_path, template_path, dest_dir_path)
         elif file_path.endswith(".md"):
             relative_path = os.path.relpath(file_path, "content")
             dest_file_path = os.path.join(
@@ -75,12 +75,12 @@ def generate_page_recursive(dir_path_content, template_path, dest_dir_path):
             )
             os.makedirs(os.path.dirname(dest_file_path), exist_ok=True)
             try:
-                generate_page(file_path, template_path, dest_file_path)
+                generate_page(base_path, file_path, template_path, dest_file_path)
             except Exception as e:
                 print(f"Quebrou {file_path} por {e}")
 
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(base_path, from_path, template_path, dest_path):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
 
     with open(from_path) as f:
@@ -94,7 +94,11 @@ def generate_page(from_path, template_path, dest_path):
     title = extract_title(content)
 
     title_updated = template.replace("{{ Title }}", title)
-    content_updated = title_updated.replace("{{ Content }}", stringfied_html)
+    content_updated = (
+        title_updated.replace("{{ Content }}", stringfied_html)
+        .replace('href="/"', f'href="{base_path}"')
+        .replace('src="/"', f'src="{base_path}"')
+    )
 
     with open(dest_path, "w+") as df:
         df.write(content_updated)

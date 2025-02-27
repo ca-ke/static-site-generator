@@ -4,13 +4,15 @@ from utils import (
     delete_files_from,
     generate_page_recursive,
 )
+import sys
 
 
 def main():
-    delete_files_from("public")
-    copy_from_source_to_destination("static", "public")
+    basepath = "/" if len(sys.argv) < 2 else sys.argv[1]
 
-    generate_page_recursive("content", "template.html", "public")
+    delete_files_from("doc")
+    copy_from_source_to_destination("static", "doc")
+    generate_page_recursive(basepath, "content", "template.html", "doc")
 
 
 if __name__ == "__main__":
