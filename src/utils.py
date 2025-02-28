@@ -96,8 +96,8 @@ def generate_page(base_path, from_path, template_path, dest_path):
     title_updated = template.replace("{{ Title }}", title)
     content_updated = (
         title_updated.replace("{{ Content }}", stringfied_html)
-        .replace('href="/"', f'href="{base_path}"')
-        .replace('src="/"', f'src="{base_path}"')
+        .replace('href="/', f'href="{base_path}')
+        .replace('src="/', f'src="{base_path}')
     )
 
     with open(dest_path, "w+") as df:
