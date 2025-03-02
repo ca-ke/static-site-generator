@@ -1,1 +1,1 @@
-python3 -m unittest discover -s src
+uv run python3 -m pytest

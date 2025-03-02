@@ -1,6 +1,6 @@
 import unittest
 
-from converters import extract_title
+from src.converters import extract_title
 
 
 class TestExtractTitle(unittest.TestCase):
